@@ -1,24 +1,38 @@
+#region imports
 import customtkinter as ctk
 from ctypes import windll, byref, sizeof, c_int
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+BACKGROUND_COLOR = "#19233c"
+#endregion 
+
+#region app
 class App(ctk.CTk):
     def __init__(self):
         # setup
-        super().__init__(fg_color = "#19233c")
-        self.geometry(f"600x500")
+        super().__init__(fg_color = BACKGROUND_COLOR)
+        self.geometry(f"850x500")
         self.title(" Compound interest calculator")
         self.ChangeTitleBar()
 
         # function
         self.CreateFrames()
-        self.mainloop()
+
+        # protocol
+        self.protocol("WM_DELETE_WINDOW", self.Destroy)
     
     def CreateFrames(self) -> None:
         '''Creates frames for the app'''
         self.input_frame = InputFrame(self)
-        self.input_frame.place(relx = 0, rely = 0, relwidth = 0.5, relheight = 1)
+        self.input_frame.place(relx = 0, rely = 0, relwidth = 0.4, relheight = 1)
         self.visual_frame = VisualFrame(self)
-        self.visual_frame.place(relx = 0.5, rely = 0, relwidth = 0.5, relheight = 1)
+        self.visual_frame.place(relx = 0.4, rely = 0, relwidth = 0.6, relheight = 1)
+
+    def Destroy(self) -> None:
+        '''Handles exiting application'''
+        self.destroy()
+        self.quit()
 
     def ChangeTitleBar(self) -> None:
         '''Changes title bar colour. NOTE: Only works on windows'''
@@ -30,10 +44,12 @@ class App(ctk.CTk):
         except:
             KeyError("Function not excuted properly")
             pass
+#endregion
 
+#region input frame
 class InputFrame(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
-        super().__init__(master, corner_radius = 0, **kwargs)
+        super().__init__(master, corner_radius = 0, fg_color = BACKGROUND_COLOR, **kwargs)
 
         self.rowconfigure((0, 1, 2, 3, 4), weight = 1, uniform = "a")
         self.columnconfigure(0, weight = 3, uniform = "a")
@@ -123,10 +139,56 @@ class InputFrame(ctk.CTkFrame):
             state = "normal"
         )
         self.interest_entry.grid(row = 3, column = 1, sticky = "w", padx = (5, 0))
+#end region
 
+#region visual frame
 class VisualFrame(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
-        super().__init__(master, corner_radius = 0, **kwargs)
+        super().__init__(master, corner_radius = 0, fg_color = BACKGROUND_COLOR, **kwargs)
+
+        plt.style.use("dark_background")
+        self.fig, self.ax = plt.subplots(figsize = (5, 5), dpi = 100)
+
+        # theme
+        self.fig.patch.set_facecolor(BACKGROUND_COLOR)  
+        self.ax.set_facecolor(BACKGROUND_COLOR)
+        self.ax.grid(True, linestyle="--", alpha=0.15, color="white")
+        for spine in self.ax.spines.values():
+            spine.set_color("#2d3a5f")
+
+        self.PlotEmptyGraph()
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
+        self.canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+
+    def PlotEmptyGraph(self) -> None:
+        """Sets up a clean, empty placeholder state for the graph."""
+        self.ax.clear()
+        
+        # Set titles and labels
+        self.ax.set_title(
+            "Investment Growth Over Time", 
+            fontname = "Helvetica", 
+            fontsize = 14, 
+            weight = "bold", 
+            pad = 15
+        )
+        self.ax.set_xlabel(
+            "Years", 
+            fontname = "Helvetica", 
+            fontsize = 11, 
+            labelpad = 8)
+        self.ax.set_ylabel(
+            "Total Balance ($)", 
+            fontname = "Helvetica", 
+            fontsize = 11, 
+            labelpad = 8)
+
+        # Set placeholder limits so it looks like a real chart graph frame
+        self.ax.set_xlim(0, 10)
+        self.ax.set_ylim(0, 1000)
+
+#end region
 
 if __name__ == "__main__":  
-    App()
+    app = App()
+    app.mainloop()
