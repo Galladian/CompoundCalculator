@@ -35,12 +35,27 @@ class InputFrame(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
         super().__init__(master, corner_radius = 0, **kwargs)
 
-        self.rowconfigure((0, 1, 2, 3), weight = 1, uniform = "a")
-        self.columnconfigure((0, 1), weight = 1, uniform = "a")
+        self.rowconfigure((0, 1, 2, 3, 4), weight = 1, uniform = "a")
+        self.columnconfigure(0, weight = 3, uniform = "a")
+        self.columnconfigure(1, weight = 2, uniform = "a")
 
+        self.InitialWidgets()
+        self.ContributionWidgets()
+        self.TimeWidgets()
+        self.InterestWidgets()
+
+        # need to program function
+        self.calculate_button = ctk.CTkButton(
+            self,
+            text = "Calculate",
+            font = ("Helvetica", 15, "bold")
+        )
+        self.calculate_button.grid(row = 4, column = 0, columnspan = 2, pady = (10, 0))
+
+    def InitialWidgets(self) -> None:
         self.initial_label = ctk.CTkLabel(
             self,
-            text = "Initial Investment: $",
+            text = "Initial Investment $",
             font = ("Helvetica", 15, "bold"),
             text_color = "white"
         )
@@ -54,6 +69,60 @@ class InputFrame(ctk.CTkFrame):
             state = "normal"
         )
         self.initial_entry.grid(row = 0, column = 1, sticky = "w", padx = (5, 0))
+
+    def ContributionWidgets(self) -> None:
+        self.weeklyContribution_label = ctk.CTkLabel(
+            self,
+            text = "Weekly contribution $",
+            font = ("Helvetica", 15, "bold"),
+            text_color = "white"
+        )
+        self.weeklyContribution_label.grid(row = 1, column = 0, sticky = "e", padx = (0, 5))
+
+        self.weeklyContribution_entry = ctk.CTkEntry(
+            self,
+            font = ("Helvetica", 15),
+            width = 100,
+            height = 30,
+            state = "normal"
+        )
+        self.weeklyContribution_entry.grid(row = 1, column = 1, sticky = "w", padx = (5, 0))
+
+    def TimeWidgets(self) -> None:
+        self.time_label = ctk.CTkLabel(
+            self,
+            text = "Years invested",
+            font = ("Helvetica", 15, "bold"),
+            text_color = "white"
+        )
+        self.time_label.grid(row = 2, column = 0, sticky = "e", padx = (0, 5))
+
+        self.time_entry = ctk.CTkEntry(
+            self,
+            font = ("Helvetica", 15),
+            width = 100,
+            height = 30,
+            state = "normal"
+        )
+        self.time_entry.grid(row = 2, column = 1, sticky = "w", padx = (5, 0))
+
+    def InterestWidgets(self) -> None:
+        self.interest_label = ctk.CTkLabel(
+            self,
+            text = "Est interest rate %",
+            font = ("Helvetica", 15, "bold"),   
+            text_color = "white"
+        )
+        self.interest_label.grid(row = 3, column = 0, sticky = "e", padx = (0, 5))
+
+        self.interest_entry = ctk.CTkEntry(
+            self,
+            font = ("Helvetica", 15),
+            width = 100,
+            height = 30,
+            state = "normal"
+        )
+        self.interest_entry.grid(row = 3, column = 1, sticky = "w", padx = (5, 0))
 
 class VisualFrame(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
