@@ -66,12 +66,19 @@ def SetMaxLength(_string: str, _max:int = 10) -> str:
 #endregion
 
 #region misc functions
-def financial_format(x: float, *args) -> str:
-    if x >= 1_000_000_000:
-        return f"${x*1e-9:.1f}B"
-    elif x >= 1_000_000:
-        return f"${x*1e-6:.1f}M"
-    elif x >= 1_000:
-        return f"${x*1e-3:.0f}K"
-    return f"${x:.0f}"
+def FinancialFormat(x: float, *args) -> str:
+    '''Formats large numbers into human readable format with suffixes (K, M, B, T) and adds a dollar sign.'''
+    match x:
+        case x if x < 0:
+            return f"-{FinancialFormat(-x)}"
+        case x if x >= 1_000_000_000_000:
+            return f"${x*1e-12:.1f}T"
+        case x if x >= 1_000_000_000:
+            return f"${x*1e-9:.1f}B"
+        case x if x >= 1_000_000:
+            return f"${x*1e-6:.1f}M"
+        case x if x >= 1_000:
+            return f"${x*1e-3:.0f}K"    
+        case _:
+            return f"${x:.0f}"
 #endregion

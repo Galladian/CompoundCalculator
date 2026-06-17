@@ -33,6 +33,7 @@ class App(ctk.CTk):
         self.CreateFrames()
 
         # protocol
+        self.bind("<Return>", lambda event: self.Calculate())
         self.protocol("WM_DELETE_WINDOW", self.Destroy)
     
     def CreateFrames(self) -> None:
@@ -110,115 +111,59 @@ class InputFrame(ctk.CTkFrame):
                  years_invested: str, interest_rate: str, **kwargs):
         # frame setup
         super().__init__(master, corner_radius = 0, fg_color = BACKGROUND_COLOR, **kwargs)
-        self.rowconfigure((0, 1, 2, 3, 4), weight = 1, uniform = "a")
+        self.rowconfigure((0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10), weight = 1, uniform = "a")
         self.columnconfigure(0, weight = 3, uniform = "a")
-        self.columnconfigure(1, weight = 2, uniform = "a")
 
         self.font = ("sans-serif", 15, "bold")
         self.vcmd = (self.register(quirks.CheckIfFloat), '%P')
 
-        # call widget functions
-        self.InitialWidgets(initial_investment)
-        self.ContributionWidgets(weekly_contribution)
-        self.TimeWidgets(years_invested)
-        self.InterestWidgets(interest_rate)
+        # create widgets
+        input_configs = [
+            {"label": "Initial Investment $", "var": initial_investment, "row": 0},
+            {"label": "Weekly contribution $", "var": weekly_contribution,"row": 2},
+            {"label": "Years invested", "var": years_invested, "row": 4},
+            {"label": "Est interest rate %", "var": interest_rate, "row": 6}
+        ]
 
-        # need to program function
+        for config in input_configs:
+            self.LabelCreator(config["label"], config["row"])
+            self.EntryCreator(config["var"], config["row"] + 1)
+
+        self.ModifiableWidgets(master)
+    
+    def ModifiableWidgets(self, master) -> None:
+        '''Creates widgets that will be called'''
         self.calculate_button = ctk.CTkButton(
             self,
             text = "Calculate",
             font = self.font,
             command = master.Calculate
         )
-        self.calculate_button.grid(row = 4, column = 0, columnspan = 2, pady = (10, 0))
+        self.calculate_button.grid(row = 8, column = 0, columnspan = 2, pady = (10, 0))
 
-    def InitialWidgets(self, initial_investment: str) -> None:
-        '''Creates widgets for initial investment input'''
-        self.initial_label = ctk.CTkLabel(
+    def LabelCreator(self, text: str, row: int) -> None:
+        '''Creates a label with consistent styling'''
+        label = ctk.CTkLabel(
             self,
-            text = "Initial Investment $",
+            text = text,
             font = self.font,
             text_color = "white"
         )
-        self.initial_label.grid(row = 0, column = 0, sticky = "e", padx = (0, 5))
+        label.grid(row = row, column = 0, sticky = "nsew", padx = (5, 5))
 
-        self.initial_entry = ctk.CTkEntry(
+    def EntryCreator(self, text_variable: str, row: int) -> None:
+        '''Creates an entry with consistent styling'''
+        entry = ctk.CTkEntry(
             self,
             font = self.font,
-            width = 100,
-            height = 30,
+            width = 200,
+            height = 35,
             state = "normal",
-            textvariable = initial_investment,
+            textvariable = text_variable,
             validate = "key",         
-            validatecommand=self.vcmd
+            validatecommand = self.vcmd
         )
-        self.initial_entry.grid(row = 0, column = 1, sticky = "w", padx = (5, 0))
-
-    def ContributionWidgets(self, weekly_contribution: str) -> None:
-        '''Creates widgets for weekly contribution input'''
-        self.weeklyContribution_label = ctk.CTkLabel(
-            self,
-            text = "Weekly contribution $",
-            font = self.font,
-            text_color = "white"
-        )
-        self.weeklyContribution_label.grid(row = 1, column = 0, sticky = "e", padx = (0, 5))
-
-        self.weeklyContribution_entry = ctk.CTkEntry(
-            self,
-            font = self.font,
-            width = 100,
-            height = 30,
-            state = "normal",
-            textvariable = weekly_contribution,
-            validate = "key",         
-            validatecommand=self.vcmd
-        )
-        self.weeklyContribution_entry.grid(row = 1, column = 1, sticky = "w", padx = (5, 0))
-
-    def TimeWidgets(self, years_invested: str) -> None:
-        ''''Creates widgets for time invested input'''
-        self.time_label = ctk.CTkLabel(
-            self,
-            text = "Years invested",
-            font = self.font,
-            text_color = "white"
-        )
-        self.time_label.grid(row = 2, column = 0, sticky = "e", padx = (0, 5))
-
-        self.time_entry = ctk.CTkEntry(
-            self,
-            font = self.font,
-            width = 100,
-            height = 30,
-            state = "normal",
-            textvariable = years_invested,
-            validate = "key",         
-            validatecommand=self.vcmd
-        )
-        self.time_entry.grid(row = 2, column = 1, sticky = "w", padx = (5, 0))
-
-    def InterestWidgets(self, interest_rate: str) -> None:
-        '''Creates widgets for interest rate input'''
-        self.interest_label = ctk.CTkLabel(
-            self,
-            text = "Est interest rate %",
-            font = self.font,   
-            text_color = "white"
-        )
-        self.interest_label.grid(row = 3, column = 0, sticky = "e", padx = (0, 5))
-
-        self.interest_entry = ctk.CTkEntry(
-            self,
-            font = self.font,
-            width = 100,
-            height = 30,
-            state = "normal",
-            textvariable = interest_rate,
-            validate = "key",         
-            validatecommand=self.vcmd
-        )
-        self.interest_entry.grid(row = 3, column = 1, sticky = "w", padx = (5, 0))
+        entry.grid(row = row, column = 0, columnspan = 2, sticky = "ew", padx = (5, 0))
 #end region
 
 #region visual frame
@@ -277,7 +222,8 @@ class VisualFrame(ctk.CTkFrame):
         )
 
         # spine and grid styling
-        self.ax.yaxis.set_major_formatter(FuncFormatter(quirks.financial_format))
+        self.fig.subplots_adjust(left=0.18)
+        self.ax.yaxis.set_major_formatter(FuncFormatter(quirks.FinancialFormat))
         self.ax.grid(True, linestyle="--", alpha=0.15, color="white")
         for spine in self.ax.spines.values():
             spine.set_color("#2d3a5f")
@@ -336,8 +282,9 @@ class VisualFrame(ctk.CTkFrame):
         self.canvas.draw()
 
     def OnHover(self, event) -> None:
-        """Finds the closest data index based on cursor X location and flips tooltip properties."""
-        # Ensure data exists and the cursor is actively floating inside the graph boundaries
+        '''Displays the annotation box with details when hovering over the graph.'''
+        
+        # ensures data exists
         if not self.years_data or event.inaxes != self.ax or event.xdata is None:
             if self.annotation_box.get_visible():
                 self.annotation_box.set_visible(False)
@@ -345,33 +292,31 @@ class VisualFrame(ctk.CTkFrame):
             return
 
         try:
-            # 🔧 Clean index selection: find which year milestone is closest to mouse X coordinate
+            # update annotation position
             index = np.argmin(np.abs(np.array(self.years_data) - event.xdata))
             
-            # Snap the tooltip point directly onto the main 'Total Value' green line coordinate
             target_x = self.years_data[index]
             target_y = self.balance_data[index]
             self.annotation_box.xy = (target_x, target_y)
 
-            # Flip position alignment side to avoid clip borders if mouse is far right
             canvas_width = self.canvas.get_width_height()[0]
             if event.x > (canvas_width * 0.65):
                 self.annotation_box.set_position((-130, 10)) 
             else:
                 self.annotation_box.set_position((10, 10))
 
-            # 🔧 Design text payload to reveal both variables cleanly
+            # format message
             year_text = f"Year {target_x:.1f}" if target_x % 1 != 0 else f"Year {int(target_x)}"
             text = (
                 f"{year_text}\n"
                 f"───────────────────\n"
-                f"Principal: ${self.contribution_data[index]:,.0f}\n"
-                f"Total Value: ${target_y:,.0f}"
+                f"Total Value: ${target_y:,.2f}\n"
+                f"Principal: ${self.contribution_data[index]:,.2f}" 
             )
             
             self.annotation_box.set_text(text)
             self.annotation_box.set_visible(True)
-            self.canvas.draw_idle()  # draw_idle utilizes less processing weight than draw()
+            self.canvas.draw_idle()  
             
         except Exception as e:
             print(f"Error on hover execution: {e}")
