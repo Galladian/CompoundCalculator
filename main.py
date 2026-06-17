@@ -56,10 +56,16 @@ class App(ctk.CTk):
             contribution = float(self.weekly_contribution.get())
             months = int(float(self.years_invested.get()) * 12)
             interest_rate = float(self.interest_rate.get()) / 100
-        except ValueError:
+
+            if months <= 0:
+                raise ValueError("Years invested must be greater than 0.")
+            
+        except ValueError as e:
             self.year_list = []
             self.balance_list = []
             self.contribution_list = []
+            self.visual_frame.PlotEmptyGraph()
+            self.input_frame.output_label.configure(text = str(e))
             return
         
         total_balance = initial
@@ -81,6 +87,12 @@ class App(ctk.CTk):
 
             # log data
             if month % 12 == 0 or month == months:
+                if(total_contributions < 0):
+                    total_contributions = 0
+
+                if(total_balance < 0):
+                    total_balance = 0
+
                 current_year = month / 12
                 self.year_list.append(current_year)
                 self.balance_list.append(round(total_balance, 2))
@@ -111,7 +123,8 @@ class InputFrame(ctk.CTkFrame):
                  years_invested: str, interest_rate: str, **kwargs):
         # frame setup
         super().__init__(master, corner_radius = 0, fg_color = BACKGROUND_COLOR, **kwargs)
-        self.rowconfigure((0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10), weight = 1, uniform = "a")
+        self.rowconfigure((0, 1, 2, 3, 4, 5, 6, 7, 8), weight = 1, uniform = "a")
+        self.rowconfigure(9, weight = 2, uniform = "a")
         self.columnconfigure(0, weight = 3, uniform = "a")
 
         self.font = ("sans-serif", 15, "bold")
@@ -141,7 +154,9 @@ class InputFrame(ctk.CTkFrame):
         )
         self.calculate_button.grid(row = 8, column = 0, columnspan = 2, pady = (10, 0))
 
-    def LabelCreator(self, text: str, row: int) -> None:
+        self.output_label = self.LabelCreator("", 9)
+
+    def LabelCreator(self, text: str, row: int) -> ctk.CTkLabel:
         '''Creates a label with consistent styling'''
         label = ctk.CTkLabel(
             self,
@@ -150,6 +165,8 @@ class InputFrame(ctk.CTkFrame):
             text_color = "white"
         )
         label.grid(row = row, column = 0, sticky = "nsew", padx = (5, 5))
+
+        return label
 
     def EntryCreator(self, text_variable: str, row: int) -> None:
         '''Creates an entry with consistent styling'''
@@ -301,9 +318,17 @@ class VisualFrame(ctk.CTkFrame):
 
             canvas_width = self.canvas.get_width_height()[0]
             if event.x > (canvas_width * 0.65):
-                self.annotation_box.set_position((-130, 10)) 
+                offset_x = -130
             else:
-                self.annotation_box.set_position((10, 10))
+                offset_x = 10
+
+            y_axis_ceiling = self.ax.get_ylim()[1]
+            if target_y > (y_axis_ceiling * 0.80):
+                offset_y = -90  
+            else:
+                offset_y = 10
+
+            self.annotation_box.set_position((offset_x, offset_y))
 
             # format message
             year_text = f"Year {target_x:.1f}" if target_x % 1 != 0 else f"Year {int(target_x)}"
