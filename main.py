@@ -83,8 +83,8 @@ class App(ctk.CTk):
                 self.balance_list.append(round(total_balance, 2))
                 self.contribution_list.append(round(total_contributions, 2))
         
-        print(self.balance_list)
-    
+        self.visual_frame.PlotGraph(self.year_list, self.contribution_list, self.balance_list)
+
     def Destroy(self) -> None:
         '''Handles exiting application'''
         self.destroy()
@@ -229,19 +229,13 @@ class VisualFrame(ctk.CTkFrame):
         # theme
         self.fig.patch.set_facecolor(BACKGROUND_COLOR)  
         self.ax.set_facecolor(BACKGROUND_COLOR)
-        self.ax.grid(True, linestyle="--", alpha=0.15, color="white")
-        for spine in self.ax.spines.values():
-            spine.set_color("#2d3a5f")
 
         self.PlotEmptyGraph()
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().pack(fill = "both", expand = True, padx = 10, pady = 10)
 
-    def PlotEmptyGraph(self) -> None:
-        """Sets up a clean, empty placeholder state for the graph."""
-        self.ax.clear()
-        
-        # Set titles and labels
+    def ApplyGraphStyling(self) -> None:
+        '''Applies consistent styling to the graph, including titles, labels, and grid.'''
         self.ax.set_title(
             "Investment Growth Over Time", 
             fontname = "Helvetica", 
@@ -253,16 +247,57 @@ class VisualFrame(ctk.CTkFrame):
             "Years", 
             fontname = "Helvetica", 
             fontsize = 11, 
-            labelpad = 8)
+            labelpad = 8
+        )
         self.ax.set_ylabel(
             "Total Balance ($)", 
             fontname = "Helvetica", 
             fontsize = 11, 
-            labelpad = 8)
+            labelpad = 8
+        )
 
-        # Set placeholder limits so it looks like a real chart graph frame
+        # spine and grid styling
+        self.ax.grid(True, linestyle="--", alpha=0.15, color="white")
+        for spine in self.ax.spines.values():
+            spine.set_color("#2d3a5f")
+
+    def PlotEmptyGraph(self) -> None:
+        '''Leaves the graph in placeholder state'''
+        self.ax.clear()
+        self.ApplyGraphStyling()
+        
         self.ax.set_xlim(0, 10)
         self.ax.set_ylim(0, 1000)
+    
+    def PlotGraph(self, years: list[float], contribution: list[float], balance: list[float]) -> None:
+        '''Plots the graph with the provided data'''
+        self.ax.clear()
+        self.ApplyGraphStyling()
+
+        # plots contributions and balance with distinct colors and styles
+        self.ax.plot(
+            years, 
+            contribution, 
+            color="#e06c75", 
+            linestyle="--",
+            linewidth=2, 
+            label="Total Principal"
+        )
+
+        self.ax.plot(
+            years, 
+            balance, 
+            color="#98c379", 
+            linewidth=3, 
+            label="Total Value"
+        )
+
+        if years:
+            self.ax.set_xlim(0, max(years))
+            self.ax.set_ylim(0, max(balance) * 1.1)
+
+        self.ax.legend(loc = "upper left", frameon = False, prop = {"family": "sans-serif", "size": 10})
+        self.canvas.draw()
 
 #end region
 
