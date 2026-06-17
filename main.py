@@ -19,9 +19,13 @@ class App(ctk.CTk):
 
         # data
         self.initial_investment = ctk.StringVar(value = "0")
-        self.monthly_contribution = ctk.StringVar(value = "0")
+        self.weekly_contribution = ctk.StringVar(value = "0")
         self.years_invested = ctk.StringVar(value = "0")
         self.interest_rate = ctk.StringVar(value = "0")
+
+        self.year_list: list[int] = []
+        self.balance_list: list[float] = []
+        self.contribution_list: list[float] = []
 
         # function
         self.CreateFrames()
@@ -34,13 +38,53 @@ class App(ctk.CTk):
         self.input_frame = InputFrame(
             self, 
             self.initial_investment, 
-            self.monthly_contribution, 
+            self.weekly_contribution, 
             self.years_invested, 
-            self.interest_rate)
+            self.interest_rate
+        )
         self.input_frame.place(relx = 0, rely = 0, relwidth = 0.4, relheight = 1)
         self.visual_frame = VisualFrame(self)
         self.visual_frame.place(relx = 0.4, rely = 0, relwidth = 0.6, relheight = 1)
 
+    def Calculate(self) -> None:
+        '''Calculates the compound interest and updates the lists of years, total balance, and contributions'''
+        try:
+            initial = float(self.initial_investment.get())
+            contribution = float(self.weekly_contribution.get())
+            months = int(float(self.years_invested.get()) * 12)
+            interest_rate = float(self.interest_rate.get()) / 100
+        except ValueError:
+            self.year_list = []
+            self.balance_list = []
+            self.contribution_list = []
+            return
+        
+        total_balance = initial
+        total_contributions = initial
+
+        monthly_contribution = contribution * (52 / 12)
+        monthly_interest_rate = interest_rate / 12
+
+        # initial values
+        self.year_list = [0.0]
+        self.balance_list = [round(total_balance, 2)]
+        self.contribution_list = [round(total_contributions, 2)]
+
+        for month in range(1, months + 1):
+            # calculate interest for the month and add contribution
+            interest_earned = total_balance * monthly_interest_rate
+            total_balance += interest_earned + monthly_contribution
+            total_contributions += monthly_contribution
+
+            # log data
+            if month % 12 == 0 or month == months:
+                current_year = month / 12
+                self.year_list.append(current_year)
+                self.balance_list.append(round(total_balance, 2))
+                self.contribution_list.append(round(total_contributions, 2))
+        
+        print(self.balance_list)
+    
     def Destroy(self) -> None:
         '''Handles exiting application'''
         self.destroy()
@@ -60,7 +104,7 @@ class App(ctk.CTk):
 
 #region input frame
 class InputFrame(ctk.CTkFrame):
-    def __init__(self, master, initial_investment: str, monthly_contribution: str, 
+    def __init__(self, master, initial_investment: str, weekly_contribution: str, 
                  years_invested: str, interest_rate: str, **kwargs):
         # frame setup
         super().__init__(master, corner_radius = 0, fg_color = BACKGROUND_COLOR, **kwargs)
@@ -72,7 +116,7 @@ class InputFrame(ctk.CTkFrame):
 
         # call widget functions
         self.InitialWidgets(initial_investment)
-        self.ContributionWidgets(monthly_contribution)
+        self.ContributionWidgets(weekly_contribution)
         self.TimeWidgets(years_invested)
         self.InterestWidgets(interest_rate)
 
@@ -80,7 +124,8 @@ class InputFrame(ctk.CTkFrame):
         self.calculate_button = ctk.CTkButton(
             self,
             text = "Calculate",
-            font = ("Helvetica", 15, "bold")
+            font = ("Helvetica", 15, "bold"),
+            command = master.Calculate
         )
         self.calculate_button.grid(row = 4, column = 0, columnspan = 2, pady = (10, 0))
 
@@ -106,8 +151,8 @@ class InputFrame(ctk.CTkFrame):
         )
         self.initial_entry.grid(row = 0, column = 1, sticky = "w", padx = (5, 0))
 
-    def ContributionWidgets(self, monthly_contribution: str) -> None:
-        '''Creates widgets for monthly contribution input'''
+    def ContributionWidgets(self, weekly_contribution: str) -> None:
+        '''Creates widgets for weekly contribution input'''
         self.weeklyContribution_label = ctk.CTkLabel(
             self,
             text = "Weekly contribution $",
@@ -122,7 +167,7 @@ class InputFrame(ctk.CTkFrame):
             width = 100,
             height = 30,
             state = "normal",
-            textvariable = monthly_contribution,
+            textvariable = weekly_contribution,
             validate = "key",         
             validatecommand=self.vcmd
         )
