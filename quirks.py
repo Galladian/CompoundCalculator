@@ -64,3 +64,14 @@ def SetMaxLength(_string: str, _max:int = 10) -> str:
     '''Cuts any character after specified length'''
     return _string[:_max]
 #endregion
+
+#region misc functions
+def financial_format(x: float, *args) -> str:
+    if x >= 1_000_000_000:
+        return f"${x*1e-9:.1f}B"
+    elif x >= 1_000_000:
+        return f"${x*1e-6:.1f}M"
+    elif x >= 1_000:
+        return f"${x*1e-3:.0f}K"
+    return f"${x:.0f}"
+#endregion

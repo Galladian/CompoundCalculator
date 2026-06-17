@@ -3,6 +3,8 @@ import customtkinter as ctk
 from ctypes import windll, byref, sizeof, c_int
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.ticker import FuncFormatter
+import numpy as np
 import quirks
 
 BACKGROUND_COLOR = "#19233c"
@@ -112,6 +114,7 @@ class InputFrame(ctk.CTkFrame):
         self.columnconfigure(0, weight = 3, uniform = "a")
         self.columnconfigure(1, weight = 2, uniform = "a")
 
+        self.font = ("sans-serif", 15, "bold")
         self.vcmd = (self.register(quirks.CheckIfFloat), '%P')
 
         # call widget functions
@@ -124,7 +127,7 @@ class InputFrame(ctk.CTkFrame):
         self.calculate_button = ctk.CTkButton(
             self,
             text = "Calculate",
-            font = ("Helvetica", 15, "bold"),
+            font = self.font,
             command = master.Calculate
         )
         self.calculate_button.grid(row = 4, column = 0, columnspan = 2, pady = (10, 0))
@@ -134,14 +137,14 @@ class InputFrame(ctk.CTkFrame):
         self.initial_label = ctk.CTkLabel(
             self,
             text = "Initial Investment $",
-            font = ("Helvetica", 15, "bold"),
+            font = self.font,
             text_color = "white"
         )
         self.initial_label.grid(row = 0, column = 0, sticky = "e", padx = (0, 5))
 
         self.initial_entry = ctk.CTkEntry(
             self,
-            font = ("Helvetica", 15),
+            font = self.font,
             width = 100,
             height = 30,
             state = "normal",
@@ -156,14 +159,14 @@ class InputFrame(ctk.CTkFrame):
         self.weeklyContribution_label = ctk.CTkLabel(
             self,
             text = "Weekly contribution $",
-            font = ("Helvetica", 15, "bold"),
+            font = self.font,
             text_color = "white"
         )
         self.weeklyContribution_label.grid(row = 1, column = 0, sticky = "e", padx = (0, 5))
 
         self.weeklyContribution_entry = ctk.CTkEntry(
             self,
-            font = ("Helvetica", 15),
+            font = self.font,
             width = 100,
             height = 30,
             state = "normal",
@@ -178,14 +181,14 @@ class InputFrame(ctk.CTkFrame):
         self.time_label = ctk.CTkLabel(
             self,
             text = "Years invested",
-            font = ("Helvetica", 15, "bold"),
+            font = self.font,
             text_color = "white"
         )
         self.time_label.grid(row = 2, column = 0, sticky = "e", padx = (0, 5))
 
         self.time_entry = ctk.CTkEntry(
             self,
-            font = ("Helvetica", 15),
+            font = self.font,
             width = 100,
             height = 30,
             state = "normal",
@@ -200,14 +203,14 @@ class InputFrame(ctk.CTkFrame):
         self.interest_label = ctk.CTkLabel(
             self,
             text = "Est interest rate %",
-            font = ("Helvetica", 15, "bold"),   
+            font = self.font,   
             text_color = "white"
         )
         self.interest_label.grid(row = 3, column = 0, sticky = "e", padx = (0, 5))
 
         self.interest_entry = ctk.CTkEntry(
             self,
-            font = ("Helvetica", 15),
+            font = self.font,
             width = 100,
             height = 30,
             state = "normal",
@@ -230,33 +233,51 @@ class VisualFrame(ctk.CTkFrame):
         self.fig.patch.set_facecolor(BACKGROUND_COLOR)  
         self.ax.set_facecolor(BACKGROUND_COLOR)
 
+        # data containers
+        self.years_data = []
+        self.balance_data = []
+        self.contribution_data = []
+
+        self.annotation_box = self.ax.annotate(
+            "", xy = (0, 0), xytext = (10, 10),
+            textcoords = "offset points",
+            bbox = dict(boxstyle = "round,pad=0.5", fc = "#1e2942", ec = "#2d3a5f", alpha = 0.95),
+            color = "white", 
+            fontname = "sans-serif",
+            fontsize = 9,
+            arrowprops = dict(arrowstyle = "->", color = "#98c379")
+        )
+        self.annotation_box.set_visible(False)
+
         self.PlotEmptyGraph()
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
+        self.canvas = FigureCanvasTkAgg(self.fig, master = self)
         self.canvas.get_tk_widget().pack(fill = "both", expand = True, padx = 10, pady = 10)
+        self.canvas.mpl_connect("motion_notify_event", self.OnHover)
 
     def ApplyGraphStyling(self) -> None:
         '''Applies consistent styling to the graph, including titles, labels, and grid.'''
         self.ax.set_title(
             "Investment Growth Over Time", 
-            fontname = "Helvetica", 
+            fontname = "sans-serif", 
             fontsize = 14, 
             weight = "bold", 
             pad = 15
         )
         self.ax.set_xlabel(
             "Years", 
-            fontname = "Helvetica", 
+            fontname = "sans-serif", 
             fontsize = 11, 
             labelpad = 8
         )
         self.ax.set_ylabel(
             "Total Balance ($)", 
-            fontname = "Helvetica", 
+            fontname = "sans-serif", 
             fontsize = 11, 
             labelpad = 8
         )
 
         # spine and grid styling
+        self.ax.yaxis.set_major_formatter(FuncFormatter(quirks.financial_format))
         self.ax.grid(True, linestyle="--", alpha=0.15, color="white")
         for spine in self.ax.spines.values():
             spine.set_color("#2d3a5f")
@@ -271,25 +292,40 @@ class VisualFrame(ctk.CTkFrame):
     
     def PlotGraph(self, years: list[float], contribution: list[float], balance: list[float]) -> None:
         '''Plots the graph with the provided data'''
+        self.years_data = years
+        self.balance_data = balance
+        self.contribution_data = contribution
+
         self.ax.clear()
         self.ApplyGraphStyling()
+
+        self.annotation_box = self.ax.annotate(
+            "", xy = (0, 0), xytext = (10, 10),
+            textcoords = "offset points",
+            bbox = dict(boxstyle = "round,pad=0.5", fc = "#1e2942", ec = "#2d3a5f", alpha = 0.95),
+            color = "white", 
+            fontname = "sans-serif",
+            fontsize = 9,
+            arrowprops = dict(arrowstyle = "->", color = "#98c379")
+        )
+        self.annotation_box.set_visible(False)
 
         # plots contributions and balance with distinct colors and styles
         self.ax.plot(
             years, 
             contribution, 
-            color="#e06c75", 
-            linestyle="--",
-            linewidth=2, 
-            label="Total Principal"
+            color = "#e06c75", 
+            linestyle = "--",
+            linewidth = 2, 
+            label = "Total Principal"
         )
 
         self.ax.plot(
             years, 
             balance, 
-            color="#98c379", 
-            linewidth=3, 
-            label="Total Value"
+            color = "#98c379", 
+            linewidth = 3, 
+            label = "Total Value"
         )
 
         if years:
@@ -298,6 +334,47 @@ class VisualFrame(ctk.CTkFrame):
 
         self.ax.legend(loc = "upper left", frameon = False, prop = {"family": "sans-serif", "size": 10})
         self.canvas.draw()
+
+    def OnHover(self, event) -> None:
+        """Finds the closest data index based on cursor X location and flips tooltip properties."""
+        # Ensure data exists and the cursor is actively floating inside the graph boundaries
+        if not self.years_data or event.inaxes != self.ax or event.xdata is None:
+            if self.annotation_box.get_visible():
+                self.annotation_box.set_visible(False)
+                self.canvas.draw_idle()
+            return
+
+        try:
+            # 🔧 Clean index selection: find which year milestone is closest to mouse X coordinate
+            index = np.argmin(np.abs(np.array(self.years_data) - event.xdata))
+            
+            # Snap the tooltip point directly onto the main 'Total Value' green line coordinate
+            target_x = self.years_data[index]
+            target_y = self.balance_data[index]
+            self.annotation_box.xy = (target_x, target_y)
+
+            # Flip position alignment side to avoid clip borders if mouse is far right
+            canvas_width = self.canvas.get_width_height()[0]
+            if event.x > (canvas_width * 0.65):
+                self.annotation_box.set_position((-130, 10)) 
+            else:
+                self.annotation_box.set_position((10, 10))
+
+            # 🔧 Design text payload to reveal both variables cleanly
+            year_text = f"Year {target_x:.1f}" if target_x % 1 != 0 else f"Year {int(target_x)}"
+            text = (
+                f"{year_text}\n"
+                f"───────────────────\n"
+                f"Principal: ${self.contribution_data[index]:,.0f}\n"
+                f"Total Value: ${target_y:,.0f}"
+            )
+            
+            self.annotation_box.set_text(text)
+            self.annotation_box.set_visible(True)
+            self.canvas.draw_idle()  # draw_idle utilizes less processing weight than draw()
+            
+        except Exception as e:
+            print(f"Error on hover execution: {e}")
 
 #end region
 
