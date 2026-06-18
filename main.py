@@ -7,15 +7,25 @@ from matplotlib.ticker import FuncFormatter
 import numpy as np
 import quirks
 
-BACKGROUND_COLOR = "#19233c"
+TITLEBAR_COLOUR = 0x00160D0D # BGR
+INPUTFRAME_COLOUR = "#0D0D16"  # Cyberpunk Onyx backdrop
+ENTRY_BG_COLOUR = "#1A1A2E"    # Deep subtle card field fill
+BORDER_COLOUR = "#222232"      # Sleek separating borders
+MUTED_TEXT_COLOUR = "#586C9E"  # Professional small metadata text
+ACCENT_GREEN = "#00e676"        # Vivid financial display text
+
+# INPUTFRAME_COLOUR = "#19233c"
+VISUALFRAME_COLOUR = "#1A1A2E"
+TEXT_COLOUR = "#180707"
 #endregion 
 
 #region app
 class App(ctk.CTk):
     def __init__(self):
         # setup
-        super().__init__(fg_color = BACKGROUND_COLOR)
+        super().__init__(fg_color = INPUTFRAME_COLOUR)
         self.geometry(f"850x500")
+        self.minsize(600, 400)
         self.title(" Compound interest calculator")
         self.ChangeTitleBar()
 
@@ -47,7 +57,7 @@ class App(ctk.CTk):
         )
         self.input_frame.place(relx = 0, rely = 0, relwidth = 0.4, relheight = 1)
         self.visual_frame = VisualFrame(self)
-        self.visual_frame.place(relx = 0.4, rely = 0, relwidth = 0.6, relheight = 1)
+        self.visual_frame.place(relx = 0.41, rely = 0.01, relwidth = 0.58, relheight = 0.98)
 
     def Calculate(self) -> None:
         '''Calculates the compound interest and updates the lists of years, total balance, and contributions'''
@@ -99,18 +109,23 @@ class App(ctk.CTk):
                 self.contribution_list.append(round(total_contributions, 2))
         
         self.visual_frame.PlotGraph(self.year_list, self.contribution_list, self.balance_list)
+        self.input_frame.output_label.configure(text = f"${total_balance:,.2f}")
 
     def Destroy(self) -> None:
         '''Handles exiting application'''
-        self.destroy()
+
+        if hasattr(self, 'visual_frame'):
+            self.visual_frame.Shutdown()
+
         self.quit()
+        self.destroy()
 
     def ChangeTitleBar(self) -> None:
         '''Changes title bar colour. NOTE: Only works on windows'''
         try:
             HWND = windll.user32.GetParent(self.winfo_id())
             DWMWA_ATTRIBUTE = 35
-            COLOR = 0x003c2319 # BGR
+            COLOR = TITLEBAR_COLOUR 
             windll.dwmapi.DwmSetWindowAttribute(HWND, DWMWA_ATTRIBUTE, byref(c_int(COLOR)), sizeof(c_int))
         except:
             KeyError("Function not excuted properly")
@@ -122,20 +137,22 @@ class InputFrame(ctk.CTkFrame):
     def __init__(self, master, initial_investment: str, weekly_contribution: str, 
                  years_invested: str, interest_rate: str, **kwargs):
         # frame setup
-        super().__init__(master, corner_radius = 0, fg_color = BACKGROUND_COLOR, **kwargs)
-        self.rowconfigure((0, 1, 2, 3, 4, 5, 6, 7, 8), weight = 1, uniform = "a")
-        self.rowconfigure(9, weight = 2, uniform = "a")
-        self.columnconfigure(0, weight = 3, uniform = "a")
+        super().__init__(master, corner_radius = 0, fg_color = INPUTFRAME_COLOUR, **kwargs)
+        self.rowconfigure((0, 2, 4, 6), weight = 1, uniform = "a")
+        self.rowconfigure((1, 3, 5, 7, 8), weight = 2, uniform = "a")
+        self.rowconfigure(9, weight = 4, uniform = "a")
+        self.columnconfigure(0, weight = 1, uniform = "a")
 
-        self.font = ("sans-serif", 15, "bold")
+        self.label_font = ("sans-serif", 12)
+        self.entry_font = ("sans-serif", 15)
         self.vcmd = (self.register(quirks.CheckIfFloat), '%P')
 
         # create widgets
         input_configs = [
-            {"label": "Initial Investment $", "var": initial_investment, "row": 0},
-            {"label": "Weekly contribution $", "var": weekly_contribution,"row": 2},
-            {"label": "Years invested", "var": years_invested, "row": 4},
-            {"label": "Est interest rate %", "var": interest_rate, "row": 6}
+            {"label": "INITIAL INVESTMENT", "var": initial_investment, "row": 0},
+            {"label": "WEEKLY CONTRIBUTION", "var": weekly_contribution,"row": 2},
+            {"label": "YEARS INVESTED", "var": years_invested, "row": 4},
+            {"label": "ANNUAL INTEREST RATE", "var": interest_rate, "row": 6}
         ]
 
         for config in input_configs:
@@ -148,23 +165,54 @@ class InputFrame(ctk.CTkFrame):
         '''Creates widgets that will be called'''
         self.calculate_button = ctk.CTkButton(
             self,
-            text = "Calculate",
-            font = self.font,
+            text = "Calculate growth",
+            font = ("sans-serif", 14, "bold"),
+            text_color = "#cbcbcb",
+            height = 42,
+            corner_radius = 6,
+            fg_color="#243356",
+            hover_color="#2e3f6a",
             command = master.Calculate
         )
         self.calculate_button.grid(row = 8, column = 0, columnspan = 2, pady = (10, 0))
 
-        self.output_label = self.LabelCreator("", 9)
+        # final output
+        self.output_card = ctk.CTkFrame(
+            self,
+            corner_radius=8,
+            fg_color = "#121824", 
+            border_color = "#1a2332",
+            border_width = 1
+        )
+        self.output_card.grid(row = 9, column = 0, sticky = "ew", padx = 20, pady = (25, 10))
+        self.output_card.columnconfigure(0, weight=1)
+
+        card_title = ctk.CTkLabel(
+            self.output_card,
+            text = "FINAL ESTIMATED BALANCE",
+            font = ("sans-serif", 10, "bold"),
+            text_color = MUTED_TEXT_COLOUR
+        )
+        card_title.grid(row = 0, column = 0, sticky = "w", padx = 16, pady = (6, 2))
+
+        # Dynamic output label
+        self.output_label = ctk.CTkLabel(
+            self.output_card,
+            text = "$0",
+            font = ("sans-serif", 24, "bold"),
+            text_color = ACCENT_GREEN
+        )
+        self.output_label.grid(row = 1, column = 0, sticky = "w", padx = 16, pady = (0, 10))
 
     def LabelCreator(self, text: str, row: int) -> ctk.CTkLabel:
         '''Creates a label with consistent styling'''
         label = ctk.CTkLabel(
             self,
             text = text,
-            font = self.font,
-            text_color = "white"
+            font = self.label_font,
+            text_color = MUTED_TEXT_COLOUR
         )
-        label.grid(row = row, column = 0, sticky = "nsew", padx = (5, 5))
+        label.grid(row = row, column = 0, sticky = "w", padx = (10, 5), pady = (0, 0))
 
         return label
 
@@ -172,28 +220,31 @@ class InputFrame(ctk.CTkFrame):
         '''Creates an entry with consistent styling'''
         entry = ctk.CTkEntry(
             self,
-            font = self.font,
+            font = self.entry_font,
             width = 200,
-            height = 35,
             state = "normal",
+            border_width = 1,
+            fg_color = ENTRY_BG_COLOUR,
+            border_color = BORDER_COLOUR,
+            text_color = TEXT_COLOUR,
             textvariable = text_variable,
             validate = "key",         
             validatecommand = self.vcmd
         )
-        entry.grid(row = row, column = 0, columnspan = 2, sticky = "ew", padx = (5, 0))
+        entry.grid(row = row, column = 0, columnspan = 2, sticky = "nsew", padx = (10, 10), pady = (0, 10))
 #end region
 
 #region visual frame
 class VisualFrame(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
-        super().__init__(master, corner_radius = 0, fg_color = BACKGROUND_COLOR, **kwargs)
+        super().__init__(master, corner_radius = 10, fg_color = VISUALFRAME_COLOUR, **kwargs)
 
         plt.style.use("dark_background")
         self.fig, self.ax = plt.subplots(figsize = (5, 5), dpi = 100)
 
         # theme
-        self.fig.patch.set_facecolor(BACKGROUND_COLOR)  
-        self.ax.set_facecolor(BACKGROUND_COLOR)
+        self.fig.patch.set_facecolor(VISUALFRAME_COLOUR)  
+        self.ax.set_facecolor(VISUALFRAME_COLOUR)
 
         # data containers
         self.years_data = []
@@ -204,7 +255,7 @@ class VisualFrame(ctk.CTkFrame):
             "", xy = (0, 0), xytext = (10, 10),
             textcoords = "offset points",
             bbox = dict(boxstyle = "round,pad=0.5", fc = "#1e2942", ec = "#2d3a5f", alpha = 0.95),
-            color = "white", 
+            color = TEXT_COLOUR, 
             fontname = "sans-serif",
             fontsize = 9,
             arrowprops = dict(arrowstyle = "->", color = "#98c379")
@@ -214,7 +265,16 @@ class VisualFrame(ctk.CTkFrame):
         self.PlotEmptyGraph()
         self.canvas = FigureCanvasTkAgg(self.fig, master = self)
         self.canvas.get_tk_widget().pack(fill = "both", expand = True, padx = 10, pady = 10)
-        self.canvas.mpl_connect("motion_notify_event", self.OnHover)
+        self.hoverid = self.canvas.mpl_connect("motion_notify_event", self.OnHover)
+
+    def Shutdown(self) -> None:
+        '''Cleans up resources used by the visual frame to prevent memory leaks.'''
+        try:
+            if hasattr(self, 'hoverid') and self.hoverid is not None:
+                self.canvas.mpl_disconnect(self.hoverid)
+            plt.close(self.fig)
+        except Exception as e:
+            print(f"Error cleaning up visual frame memory: {e}")
 
     def ApplyGraphStyling(self) -> None:
         '''Applies consistent styling to the graph, including titles, labels, and grid.'''
@@ -239,9 +299,9 @@ class VisualFrame(ctk.CTkFrame):
         )
 
         # spine and grid styling
-        self.fig.subplots_adjust(left=0.18)
+        self.fig.subplots_adjust(left = 0.18)
         self.ax.yaxis.set_major_formatter(FuncFormatter(quirks.FinancialFormat))
-        self.ax.grid(True, linestyle="--", alpha=0.15, color="white")
+        self.ax.grid(True, linestyle="--", alpha=0.15, color=TEXT_COLOUR)
         for spine in self.ax.spines.values():
             spine.set_color("#2d3a5f")
 
@@ -266,7 +326,7 @@ class VisualFrame(ctk.CTkFrame):
             "", xy = (0, 0), xytext = (10, 10),
             textcoords = "offset points",
             bbox = dict(boxstyle = "round,pad=0.5", fc = "#1e2942", ec = "#2d3a5f", alpha = 0.95),
-            color = "white", 
+            color = TEXT_COLOUR, 
             fontname = "sans-serif",
             fontsize = 9,
             arrowprops = dict(arrowstyle = "->", color = "#98c379")
