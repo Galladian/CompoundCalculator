@@ -16,7 +16,7 @@ ACCENT_GREEN = "#00e676"        # Vivid financial display text
 
 # INPUTFRAME_COLOUR = "#19233c"
 VISUALFRAME_COLOUR = "#1A1A2E"
-TEXT_COLOUR = "#180707"
+TEXT_COLOUR = "#E7E7E7"
 #endregion 
 
 #region app
@@ -67,15 +67,21 @@ class App(ctk.CTk):
             months = int(float(self.years_invested.get()) * 12)
             interest_rate = float(self.interest_rate.get()) / 100
 
+            if initial < 0:
+                raise ValueError("Initial investment must be positive.")
+            
             if months <= 0:
                 raise ValueError("Years invested must be greater than 0.")
+            
+            if months > 12000:
+                raise ValueError("Years invested must be less than 1000.")
             
         except ValueError as e:
             self.year_list = []
             self.balance_list = []
             self.contribution_list = []
             self.visual_frame.PlotEmptyGraph()
-            self.input_frame.output_label.configure(text = str(e))
+            self.input_frame.output_label.configure(text = str(e), font = ("sans-serif", 13.5, "bold"), text_color = "#e06c75")
             return
         
         total_balance = initial
